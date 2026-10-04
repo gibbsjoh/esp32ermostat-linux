@@ -41,7 +41,13 @@ overrideThermo = 0
 overrideMaxMins = 20
 overrideMaxSeconds = overrideMaxMins * 60 # will revert to thermo control after this many minutes
 overrideStartTime = 1 # using epoch time, set to 1 so we have declared the variable
-targetTemp = 19 # target temp for the boiler to achieve - set to something around what you'd usually have
+
+# try to read most recent target temp from file, otherwise set to 19
+try:
+    with open("target.txt","r") as theFile:
+        targetTemp = int(theFile.read())
+except:
+    targetTemp = 19 # target temp for the boiler to achieve if not stored - set to something around what you'd usually have
 
 # get the temp every 30 seconds and create a rolling average over 5 mins
 # Store the last 10 readings (5 minutes at 30s intervals)
@@ -51,8 +57,6 @@ bufferIndex = 0
 bufferFilled = False
 
 sensorURL = "http://192.168.0.248"
-
-useDisplay = 0
 
 # load the html
 def web_page():
@@ -100,6 +104,11 @@ def dechunk(raw):
         raw = raw[end+2:]
     return out
 
+def writeTargetToFile(targetTemp):
+    # writes the target temp to target.txt, so we can read this on reboot
+    with open("target.txt","w") as theFile:
+        theFile.write(str(targetTemp))
+
 
 def parseRequest(theRequest):
     reqString = theRequest.decode() # convert bytes to a string
@@ -113,35 +122,6 @@ def parseRequest(theRequest):
         returnMe = {"0":"0"}
     print(returnMe)
     return returnMe
-
-# function to get target temp value from the request from the setup webpage
-def get_target_value(theRequest):
-    reqString = theRequest.decode() # convert bytes to a string
-    key = "?target=" # set what we're looking for
-    idx = reqString.find(key)
-    if idx == -1:
-        return None # returns None if called w/out the temp setting
-
-    start = idx + len(key)
-    end = reqString.find(" ", start)  # end of URL path
-    if end == -1:
-        end = len(reqString)
-
-    return reqString[start:end]
-
-def get_override_value(theRequest):
-    reqString = theRequest.decode() # convert bytes to a string
-    key = "?override=" # set what we're looking for
-    idx = reqString.find(key)
-    if idx == -1:
-        return None # returns None if called w/out this parameter
-
-    start = idx + len(key)
-    end = reqString.find(" ", start)  # end of URL path
-    if end == -1:
-        end = len(reqString)
-
-    return reqString[start:end]
 
 def addCurrentTempToBuffer():
     global bufferIndex, bufferFilled
@@ -164,23 +144,6 @@ def getRunningAverage():
     theAverageTemp = round(sum(tempBuffer) / len(tempBuffer),1)
     #print("Current average:", theAverageTemp)
     return theAverageTemp
-
-# the 2 line display logic isn't needed for now but we'll keep some of it anyway
-# async def updateDisplay():
-#     # updates the status display every 25 seconds
-#     global targetTemp
-#     global boilerOnOff
-#     #global lcd
-#     while True:
-#         line1 = "Target: " + str(targetTemp)
-#         line2 = "Boiler is: " + boilerOnOff.upper()
-#         # lcd.clear()
-#         # lcd.move_to(0, 0)
-#         # lcd.putstr(line1)
-#         # lcd.move_to(0, 1)
-#         # lcd.putstr(line2)
-        
-#         await asyncio.sleep(25)
 
 async def getTempLoop():
     while True:
