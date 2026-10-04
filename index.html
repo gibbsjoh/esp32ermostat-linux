@@ -1,0 +1,161 @@
+<html>
+
+<head>
+    <title>ESP32ermostat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:,">
+    <style>
+        html {
+            font-family: Helvetica;
+            display: inline-block;
+            margin: 0px auto;
+            text-align: center;
+        }
+
+        h1 {
+            color: #0F3376;
+            padding: 2vh;
+        }
+
+        .inputField {
+            border: 1px solid black;
+            border-radius: 4px;
+            width: 300px;
+            height: 50px;
+            font-size: 24px;
+            margin: 2px;
+        }
+
+        p {
+            font-size: 1.5rem;
+        }
+
+        .btn-link-on {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: green;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 30px;
+        }
+
+        .btn-link-on:hover {
+            background-color: darkgreen;
+        }
+
+        .btn-link-off {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: rgb(209, 3, 3);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 30px;
+        }
+
+        .btn-link-off:hover {
+            background-color: rgb(61, 1, 1);
+        }
+
+        input[type=submit] {
+            display: inline-block;
+            background-color: #e7bd3b;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            padding: 16px 40px;
+            text-decoration: none;
+            font-size: 30px;
+            margin: 2px;
+            cursor: pointer;
+        }
+
+        .button {
+            display: inline-block;
+            background-color: #e7bd3b;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            padding: 16px 40px;
+            text-decoration: none;
+            font-size: 30px;
+            margin: 2px;
+            cursor: pointer;
+        }
+
+        .button2 {
+            background-color: #4286f4;
+        }
+
+        .main-layout {
+            display: flex;
+            flex-direction: column;
+            /* Default: phone/tall layout */
+            align-items: center;
+        }
+
+        .left-column {
+            width: 100%;
+        }
+
+        .right-column {
+            width: 100%;
+        }
+
+        /* Wider than tall */
+        @media (orientation: landscape) {
+            .main-layout {
+                flex-direction: row;
+                justify-content: center;
+                align-items: flex-start;
+                gap: 40px;
+            }
+
+            .left-column {
+                width: 500px;
+            }
+
+            .right-column {
+                width: 300px;
+                padding-top: 60px;
+                /* roughly aligns with content */
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Thermostat</h1>
+    <div class="main-layout">
+
+        <div class="left-column">
+            <p><strong>Status: </strong>{boilerStatus}</p>
+            <p><strong>Current Room Temp: </strong>{roomTemp}</p>
+            <p><strong>Target Room Temp: </strong>{targetTemp}</p>
+
+            <form action="/">
+                <label>Desired Home Temperature:</label><br>
+                <input type="text" class="inputField" id="target" name="target"><br>
+                <input type="submit" value="Submit">
+            </form>
+
+            <hr>
+        </div>
+
+        <div class="right-column">
+            <p>
+                <a href="/?override=1" class="btn-link-on">
+                    Turn Heating On
+                </a>
+            </p>
+
+            <p>
+                <a href="/?override=2" class="btn-link-off">
+                    Turn Heating Off
+                </a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
