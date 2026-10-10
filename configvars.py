@@ -18,5 +18,5 @@ bufferSize = 10
 
 sensorURL = "http://192.168.0.248"
 
-# relayPin = 18
-# dht11Pin = 5
+relayPin = 18
+dht11Pin = 5
