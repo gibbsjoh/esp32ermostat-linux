@@ -5,9 +5,10 @@ import socket
 import json
 import requests
 import asyncio
-import RPi.GPIO as GPIO
+import VisionFive.gpio as GPIO
 import dht11
 from configvars import *
+
 
 # set up socket for http server
 thisSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -16,10 +17,11 @@ thisSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 thisSocket.bind(('', 8080))
 thisSocket.listen(5)
 
+
 # define a pin for relay control
 GPIO.setmode(GPIO.BCM) # Use Broadcom pin numbering
 GPIO.setwarnings(False)
-
+relayPin = 44
 GPIO.setup(relayPin, GPIO.OUT)
 # to turn on: GPIO.output(relayPin, GPIO.HIGH)
 # to turn off: GPIO.output(relayPin, GPIO.LOW)
@@ -28,6 +30,7 @@ GPIO.setup(relayPin, GPIO.OUT)
 GPIO.output(relayPin, GPIO.LOW)
 
 # added local dht11 rather than using remote sensor
+dht11Pin = 61
 localTempSensor = dht11.DHT11(pin=dht11Pin)
 
 # try to read most recent target temp from file, otherwise set to 19
@@ -42,9 +45,6 @@ except:
 tempBuffer = []
 bufferIndex = 0
 bufferFilled = False
-
-# string for time boiler has been on manual override
-orDisplayString = "Auto"
 
 # load the html
 def web_page():
@@ -61,61 +61,29 @@ def getTempFromSensor():
     global sensorURL
     global targetTemp
     global tempSensorType
-    if tempSensorType == "remote":
-        try:
-            response = requests.get(sensorURL)
-            responseJSON = json.loads(response.text)
-            theTempReading = responseJSON["temp"]
-            returnMe = round(float(theTempReading),1)
-        except:
-            returnMe = targetTemp # if the sensor stops responding, use whatever the target was last time
-    else:
-        sensorReading = localTempSensor.read()
-        if sensorReading.is_valid():
-            theTemp = sensorReading.temperature
-            returnMe = theTemp
-        else:
-            print("Error: %d" % sensorReading.error_code)
-            returnMe = 0
+    # if tempSensorType == "remote":
+    #     try:
+    #         response = requests.get(sensorURL)
+    #         responseJSON = json.loads(response.text)
+    #         theTempReading = responseJSON["temp"]
+    #         returnMe = round(float(theTempReading),1)
+    #     except:
+    #         returnMe = targetTemp # if the sensor stops responding, use whatever the target was last time
+    # else:
+    #     sensorReading = localTempSensor.read()
+    #     if sensorReading.is_valid():
+    #         theTemp = sensorReading.temperature
+    #         returnMe = theTemp
+    #     else:
+    #         print("Error: %d" % sensorReading.error_code)
+    #         returnMe = 0
+    returnMe = 20
     return returnMe
-
-def dechunk(raw):
-    out = ""
-    while raw:
-        pos = raw.find("\r\n")
-        size = int(raw[:pos], 16)
-        if size == 0:
-            break
-        start = pos + 2
-        end = start + size
-        out += raw[start:end]
-        raw = raw[end+2:]
-    return out
 
 def writeTargetToFile(targetTemp):
     # writes the target temp to target.txt, so we can read this on reboot
     with open("target.txt","w") as theFile:
         theFile.write(str(targetTemp))
-
-def parseRequest(theRequest):
-    returnMe = {}
-    reqString = theRequest.decode() # convert bytes to a string
-    print(type(reqString))
-    theList = reqString.split()[1]
-    theArguments = theList.replace("?","").replace("&","\n").replace("/","")
-    if theArguments != "favicon":
-        for thisArg in theArguments.splitlines():
-            try:
-                thisKey = thisArg.split("=")[0]
-                thisValue = thisArg.split("=")[1]
-                returnMe[thisKey] = thisValue
-            except:
-                pass
-        if not "show" in returnMe:
-            returnMe["show"] = "json"
-    else:
-        returnMe["show"] = "json"
-    return returnMe
 
 def addCurrentTempToBuffer():
     global bufferIndex, bufferFilled
@@ -144,41 +112,26 @@ async def getTempLoop():
         addCurrentTempToBuffer()
         await asyncio.sleep(55)   # 55‑second interval
         
-async def boilerControl():
-    global targetTemp
-    global boilerOnOff
-    global overrideThermo
-    global overrideStartTime
-    global overrideMaxMin
-    global orDisplayString
-    # get the average temperature
-    # compare it to the target temp
-    # turn boiler on or off accordingly
-    while True:
-        #print("Called boiler loop")
-        currentAverage = getRunningAverage()
+def parseRequest(theRequest):
+    returnMe = {}
+    reqString = theRequest.decode() # convert bytes to a string
+    print(type(reqString))
+    theList = reqString.split()[1]
+    theArguments = theList.replace("?","").replace("&","\n").replace("/","")
+    if theArguments != "favicon":
+        for thisArg in theArguments.splitlines():
+            try:
+                thisKey = thisArg.split("=")[0]
+                thisValue = thisArg.split("=")[1]
+                returnMe[thisKey] = thisValue
+            except:
+                pass
+        if not "show" in returnMe:
+            returnMe["show"] = "json"
+    else:
+        returnMe["show"] = "json"
+    return returnMe
 
-        if overrideThermo == 1:
-            # check time elapsed since it was set
-            timeNow = time.monotonic()
-            orElapsedMins = (timeNow - overrideStartTime) * 60
-            orDisplayString = str(orElapsedMins) + " / 20 mins"
-            if timeNow - overrideStartTime > (overrideMaxSeconds):
-                # turn on and start timer
-                overrideThermo = 0
-                overrideStartTime = 1
-                GPIO.output(relayPin, GPIO.LOW)
-                boilerOnOff = "Off"
-                orDisplayString = "Auto"
-                orElapsedMins = 0
-        elif ( currentAverage > targetTemp and overrideThermo == 0 ):
-            GPIO.output(relayPin, GPIO.LOW)
-            #print("Turning boiler off")
-            boilerOnOff = "Off"
-        elif ( currentAverage < targetTemp ):
-            GPIO.output(relayPin, GPIO.HIGH)
-            boilerOnOff = "On"
-        await asyncio.sleep(20)
 
 # webserver notes:
 # if no arguments are passed in the URL, then return OK
@@ -267,6 +220,43 @@ async def webServer():
         conn.close()
         
         await asyncio.sleep(1)
+        
+async def boilerControl():
+    global targetTemp
+    global boilerOnOff
+    global overrideThermo
+    global overrideStartTime
+    global overrideMaxMins
+    # get the average temperature
+    # compare it to the target temp
+    # turn boiler on or off accordingly
+    while True:
+        #print("Called boiler loop")
+        currentAverage = getRunningAverage()
+
+        if overrideThermo == 1:
+            # check time elapsed since it was set
+            timeNow = time.monotonic()
+            #print(timeNow)
+            #print(overrideStartTime)
+            #print(timeNow - overrideStartTime)
+            #print(overrideMaxMins)
+            if timeNow - overrideStartTime > (overrideMaxSeconds):
+                # turn on and start timer
+                overrideThermo = 0
+                overrideStartTime = 1
+                GPIO.output(relayPin, GPIO.LOW)
+                boilerOnOff = "Off"
+        elif ( currentAverage > targetTemp and overrideThermo == 0 ):
+            GPIO.output(relayPin, GPIO.LOW)
+            #print("Turning boiler off")
+            boilerOnOff = "Off"
+        elif ( currentAverage < targetTemp ):
+            GPIO.output(relayPin, GPIO.HIGH)
+            #print("Turning boiler on")
+            boilerOnOff = "On"
+        await asyncio.sleep(20)
+
 
 async def main():
     # main function to tie it all togetrher
