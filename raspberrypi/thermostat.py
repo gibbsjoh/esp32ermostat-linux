@@ -226,7 +226,7 @@ async def webServer():
         for pKey in theParameter:
             globals()[pKey] = theParameter[pKey]
 
-        targetTemp = target if target is not None else targetTemp
+        targetTemp = target if "target" in theParameter else targetTemp
         showMe = show
         roomTemp = getRunningAverage()
         
