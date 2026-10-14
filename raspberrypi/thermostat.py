@@ -171,11 +171,11 @@ async def boilerControl():
                 boilerOnOff = "Off"
                 orDisplayString = "Auto"
                 orElapsedMins = 0
-        elif ( currentAverage > targetTemp and overrideThermo == 0 ):
+        elif ( currentAverage is not None and currentAverage >= targetTemp and overrideThermo == 0 ):
             GPIO.output(relayPin, GPIO.LOW)
             #print("Turning boiler off")
             boilerOnOff = "Off"
-        elif ( currentAverage < targetTemp ):
+        elif ( currentAverage is not None and currentAverage < targetTemp ):
             GPIO.output(relayPin, GPIO.HIGH)
             boilerOnOff = "On"
         await asyncio.sleep(20)
@@ -249,7 +249,7 @@ async def webServer():
             boilerOnOff = "Off"
 
         if showMe == "json":
-            response = {"boilerStatus":boilerOnOff,"targetTemp":targetTemp,"roomTemp":roomTemp}
+            response = {"statusNow":boilerOnOff,"targetTemp":targetTemp,"roomTemp":roomTemp}
             response = str(response)
             theHeader = "HTTP/1.1 200 OK\nContent-Type: application/json\nConnection: close\n\n"
         elif showMe == "webpage":
