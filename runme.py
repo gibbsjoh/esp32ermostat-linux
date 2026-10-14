@@ -5,7 +5,7 @@ from platform import machine
 thisArch = machine()
 
 if thisArch == "riscv64":
-    import thermostat-vf2 as thermostat
+    from visionfive2 import thermostat_vf2 as thermostat
 elif thisArch == "aarch64" or thisArch == "armv7l":
-    import thermostat
+    from raspberrypi import thermostat
 
