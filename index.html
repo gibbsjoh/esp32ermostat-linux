@@ -12,9 +12,23 @@
             text-align: center;
         }
 
+        body {
+            background-color: rgb(138, 139, 140);
+        }
+
         h1 {
             color: #0F3376;
             padding: 2vh;
+        }
+
+        label {
+            font-size: 24px;
+            text-decoration: solid;
+        }
+
+        .jg-label {
+            font-size: 24px;
+            text-decoration: solid;
         }
 
         .inputField {
@@ -30,14 +44,21 @@
             font-size: 1.5rem;
         }
 
+        #footer {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+        }
+
         .btn-link-on {
             display: inline-block;
             padding: 10px 20px;
+            width: 220px;
             background-color: green;
             color: white;
             text-decoration: none;
             border-radius: 5px;
-            font-size: 30px;
+            font-size: 24px;
         }
 
         .btn-link-on:hover {
@@ -48,10 +69,11 @@
             display: inline-block;
             padding: 10px 20px;
             background-color: rgb(209, 3, 3);
+            width: 220px;
             color: white;
             text-decoration: none;
             border-radius: 5px;
-            font-size: 30px;
+            font-size: 24px;
         }
 
         .btn-link-off:hover {
@@ -61,14 +83,20 @@
         input[type=submit] {
             display: inline-block;
             background-color: #e7bd3b;
+            width: 220px;
             border: none;
             border-radius: 4px;
             color: white;
-            padding: 16px 40px;
+            padding: 10px 30px;
             text-decoration: none;
-            font-size: 30px;
+            font-size: 24px;
             margin: 2px;
             cursor: pointer;
+        }
+
+        .temp-selector {
+            border-radius: 5px;
+            font-size: 24px;
         }
 
         .button {
@@ -79,7 +107,7 @@
             color: white;
             padding: 16px 40px;
             text-decoration: none;
-            font-size: 30px;
+            font-size: 24px;
             margin: 2px;
             cursor: pointer;
         }
@@ -118,44 +146,89 @@
 
             .right-column {
                 width: 300px;
-                padding-top: 60px;
+                padding-top: 30px;
                 /* roughly aligns with content */
             }
         }
     </style>
+    <!-- <link rel="stylesheet" href="style-new.css"> -->
 </head>
 
 <body>
-    <h1>Thermostat</h1>
+    <script>
+        function isiPhone() {
+            var
+                is_ios = /iP(ad|od|hone)/i.test(window.navigator.userAgent),
+                is_safari = !!navigator.userAgent.match(/Version\/[\d\.]+.*Safari/);
+            if (is_ios && is_safari) {
+                return ("iphone");
+                // var
+                //   $html = document.documentElement,
+                //   classes = $html.className.concat(' is-ios-safari');
+                // $html.className = classes;
+            }
+            else {
+                return ("other");
+            }
+        }
+        // Function to refresh the page
+        function autoRefresh() {
+            window.location.reload(); // Reloads the current page
+        }
+        // Set the interval to refresh every 60 seconds (60000 milliseconds)
+        var thisClient = isiPhone();
+        if thisClient = "iPhone"{
+            setInterval(autoRefresh, 60000);
+        }
+
+    </script>
     <div class="main-layout">
 
         <div class="left-column">
             <p><strong>Status: </strong>{boilerStatus} - {orDisplayString}</p>
             <p><strong>Current Room Temp: </strong>{roomTemp}</p>
-            <p><strong>Target Room Temp: </strong>{targetTemp}</p>
+        </div>
+        <div id="footer">
+            <p class="jg-label"><strong>Target Room Temp: </strong>{targetTemp}</p>
 
             <form action="/">
-                <label>Desired Home Temperature:</label><br>
-                <input type="text" class="inputField" id="target" name="target"><br>
-                <input type="submit" value="Submit">
+                <label>New Temp:</label>
+                <select name="target" id="target" class="temp-selector">
+                    <option value="17">17</option>
+                    <option value="17.5">17.5</option>
+                    <option value="18">18</option>
+                    <option value="18.5">18.5</option>
+                    <option value="19">19</option>
+                    <option value="19.5">19.5</option>
+                    <option value="20">20</option>
+                    <option value="20.5">20.5</option>
+                    <option value="21">21</option>
+                    <option value="21.5">21.5</option>
+                    <option value="22">22</option>
+                </select>
+                <!-- <input type="text" class="inputField" id="target" name="target"><br> -->
+                <input type="submit" value="Set">
             </form>
 
-            <hr>
-        </div>
 
-        <div class="right-column">
-            <p>
-                <a href="/?override=1" class="btn-link-on">
-                    Turn Heating On
-                </a>
-            </p>
+            <div class="right-column">
+                <p>
+                    <a href="/?override=2" class="btn-link-off">
+                        Turn Heating Off
+                    </a>
+                </p>
+                <p>
+                    <a href="/?override=1" class="btn-link-on">
+                        Turn Heating On
+                    </a>
+                </p>
 
-            <p>
-                <a href="/?override=2" class="btn-link-off">
-                    Turn Heating Off
-                </a>
-            </p>
+            </div>
         </div>
     </div>
+        <script>
+    window.history.replaceState({}, "", "/");
+    </script>
 </body>
+
 </html>

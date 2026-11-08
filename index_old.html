@@ -1,0 +1,48 @@
+<html>
+
+<head>
+    <title>ESP32ermostat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:,">
+
+</head>
+
+<body>
+    <script>
+            // Function to refresh the page
+            function autoRefresh() {
+                window.location.reload(); // Reloads the current page
+            }
+            // Set the interval to refresh every 60 seconds (60000 milliseconds)
+            setInterval(autoRefresh, 60000);
+        </script>
+    <div class="main-layout">
+
+        <div class="left-column">
+            <p><strong>Status: </strong>{boilerStatus} - {orDisplayString}</p>
+            <p><strong>Current Room Temp: </strong>{roomTemp}<br>
+            <strong>Target Room Temp: </strong>{targetTemp}</p>
+
+            <form action="/">
+                <label>Desired Home Temperature:</label><br>
+                <input type="text" class="inputField" id="target" name="target"><br>
+                <input type="submit" value="Submit">
+            </form>
+        </div>
+
+        <div class="right-column">
+            <p>
+                <a href="/?override=1" class="btn-link-on">
+                    Turn Heating On
+                </a>
+            </p>
+
+            <p>
+                <a href="/?override=2" class="btn-link-off">
+                    Turn Heating Off
+                </a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

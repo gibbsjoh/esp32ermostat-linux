@@ -13,7 +13,7 @@ from configvars import *
 thisSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 thisSocket.setblocking(False) # need to set non blocking so async works!
 thisSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-thisSocket.bind(('', 8080))
+thisSocket.bind(('192.168.0.172', 8080))
 thisSocket.listen(5)
 
 # define a pin for relay control
@@ -99,22 +99,36 @@ def writeTargetToFile(targetTemp):
 
 def parseRequest(theRequest):
     returnMe = {}
-    reqString = theRequest.decode() # convert bytes to a string
-    print(type(reqString))
-    theList = reqString.split()[1]
-    theArguments = theList.replace("?","").replace("&","\n").replace("/","")
-    if theArguments != "favicon":
-        for thisArg in theArguments.splitlines():
-            try:
-                thisKey = thisArg.split("=")[0]
-                thisValue = thisArg.split("=")[1]
-                returnMe[thisKey] = thisValue
-            except:
+    try:
+        reqString = theRequest.decode() # convert bytes to a string
+        
+        if "favicon" in reqString:
+            pass
+        else:
+            if "{" in reqString:
+                argFormat = "json"
+            else:
+                argFormat = "plaintext"
+            
+            if argFormat == "plaintext":
+                theList = reqString.split()[1]
+                theArguments = theList.replace("?","").replace("&","\n").replace("/","")
+                if theArguments != "favicon":
+                    for thisArg in theArguments.splitlines():
+                        try:
+                            thisKey = thisArg.split("=")[0]
+                            thisValue = thisArg.split("=")[1]
+                            returnMe[thisKey] = thisValue
+                        except:
+                            pass
+                    if not "show" in returnMe:
+                        returnMe["show"] = "webpage"
+                else:
+                    returnMe["show"] = "webpage"
+            elif argFormat == "json":
                 pass
-        if not "show" in returnMe:
-            returnMe["show"] = "json"
-    else:
-        returnMe["show"] = "json"
+    except:
+        print("Parse error")
     return returnMe
 
 def addCurrentTempToBuffer():
@@ -157,7 +171,8 @@ async def boilerControl():
     while True:
         #print("Called boiler loop")
         currentAverage = getRunningAverage()
-
+        print(targetTemp)
+        print(currentAverage)
         if overrideThermo == 1:
             # check time elapsed since it was set
             timeNow = time.monotonic()
@@ -172,13 +187,16 @@ async def boilerControl():
                 orDisplayString = "Auto"
                 orElapsedMins = 0
         elif ( currentAverage is not None and currentAverage >= targetTemp and overrideThermo == 0 ):
-            GPIO.output(relayPin, GPIO.LOW)
-            #print("Turning boiler off")
-            boilerOnOff = "Off"
+            if boilerOnOff != "Off":
+                GPIO.output(relayPin, GPIO.LOW)
+                print("Turning boiler off")
+                boilerOnOff = "Off"
         elif ( currentAverage is not None and currentAverage < targetTemp ):
-            GPIO.output(relayPin, GPIO.HIGH)
-            boilerOnOff = "On"
-        await asyncio.sleep(20)
+            if boilerOnOff != "On":
+                GPIO.output(relayPin, GPIO.HIGH)
+                print("Turning boiler on")
+                boilerOnOff = "On"
+        await asyncio.sleep(4)
 
 # webserver notes:
 # if no arguments are passed in the URL, then return OK
@@ -220,51 +238,55 @@ async def webServer():
             continue
         
         # parse the URL parameter
-        theParameter = parseRequest(request)
-        # now we have a JSON array of arguments, do things based thereon
-        # get the param name and value
-        for pKey in theParameter:
-            globals()[pKey] = theParameter[pKey]
+        try:
+            theParameter = parseRequest(request)
+            # now we have a JSON array of arguments, do things based thereon
+            # get the param name and value
+            for pKey in theParameter:
+                globals()[pKey] = theParameter[pKey]
 
-        targetTemp = target if "target" in theParameter else targetTemp
-        showMe = show
-        roomTemp = getRunningAverage()
-        
-        # target temp will be set from the var setting above, no need to set it
-        
-        # set vars for boiler control
-        if overrideThermoNow == 1:
-            # is it a value change
-            overrideThermoNow = 0
-            if overrideThermo == 0:
-                overrideThermo = 1
-                overrideStartTime = time.monotonic()
-                GPIO.output(relayPin, GPIO.HIGH)
-                boilerOnOff = "On"
-        elif overrideThermoNow == 2:
-            # manually turn off before 20 mins
-            overrideThermoNow = 0
-            overrideThermo = 0
-            GPIO.output(relayPin, GPIO.LOW)
-            boilerOnOff = "Off"
+            targetTemp = float(target) if "target" in theParameter else float(targetTemp)
+            writeTargetToFile(targetTemp)
+            showMe = show
+            roomTemp = getRunningAverage()
+            
+            # target temp will be set from the var setting above, no need to set it
+            
+            # set vars for boiler control
+            if overrideThermoNow == 1:
+                # is it a value change
+                overrideThermoNow = 0
+                if overrideThermo == 0:
+                    overrideThermo = 1
+                    overrideStartTime = time.monotonic()
+                    GPIO.output(relayPin, GPIO.HIGH)
+                    boilerOnOff = "On"
+            elif overrideThermoNow == 2:
+                # manually turn off before 20 mins
+                overrideThermoNow = 0
+                overrideThermo = 0
+                GPIO.output(relayPin, GPIO.LOW)
+                boilerOnOff = "Off"
 
-        if showMe == "json":
-            response = {"statusNow":boilerOnOff,"targetTemp":targetTemp,"roomTemp":roomTemp}
-            response = str(response)
-            theHeader = "HTTP/1.1 200 OK\nContent-Type: application/json\nConnection: close\n\n"
-        elif showMe == "webpage":
-            # set boiler status text
-            response = (
-            html.replace("{boilerStatus}", boilerOnOff)
-                .replace("{targetTemp}", str(targetTemp))
-                .replace("{roomTemp}", str(getRunningAverage()))
-                .replace("{orDisplayString}", orDisplayString)
-                )
-            theHeader = "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: close\n\n"
-        
-        conn.send(theHeader.encode())
-        conn.sendall(response.encode())
-        conn.close()
+            if showMe == "json":
+                response = {"statusNow":boilerOnOff,"targetTemp":targetTemp,"roomTemp":roomTemp}
+                response = str(response)
+                theHeader = "HTTP/1.1 200 OK\nContent-Type: application/json\nConnection: close\n\n"
+            else:
+                # set boiler status text
+                response = (
+                html.replace("{boilerStatus}", boilerOnOff)
+                    .replace("{targetTemp}", str(targetTemp))
+                    .replace("{roomTemp}", str(getRunningAverage()))
+                    .replace("{orDisplayString}", orDisplayString)
+                    )
+                theHeader = "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: close\n\n"
+            conn.send(theHeader.encode())
+            conn.sendall(response.encode())
+            conn.close()
+            showMe = ""
+        except:
+            print("Error parsing http request. Possibly using https?")
         
         await asyncio.sleep(1)
 

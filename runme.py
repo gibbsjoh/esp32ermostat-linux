@@ -6,6 +6,6 @@ thisArch = machine()
 
 if thisArch == "riscv64":
     from visionfive2 import thermostat_vf2 as thermostat
-elif thisArch == "aarch64" or thisArch == "armv7l":
+elif thisArch == "aarch64" or thisArch == "armv7l" or thisArch == "armv6l":
     from raspberrypi import thermostat
 
